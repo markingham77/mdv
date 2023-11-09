@@ -13,6 +13,8 @@ from pandas.api.types import (
 )
 from dateutil.parser import parse
 
+st.set_page_config(page_title="Multi-Dimensional Data Viewer")
+
 def is_date(string, fuzzy=False):
     """
     Return whether the string can be interpreted as a date.
