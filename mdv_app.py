@@ -13,7 +13,7 @@ from pandas.api.types import (
 )
 from dateutil.parser import parse
 
-st.set_page_config(page_title="Multi-Dimensional Data Viewer")
+st.set_page_config(page_title="Multi-Dimensional Data Viewer",layout="wide")
 
 def is_date(string, fuzzy=False):
     """
@@ -29,8 +29,6 @@ def is_date(string, fuzzy=False):
     except ValueError:
         return False
     
-# from pydqt import Query
-st.set_page_config(layout="wide")
 st.title('Multi-Dimension Data Viewer')
 
 file_uploaded = st.file_uploader('Upload your csv')
@@ -39,18 +37,12 @@ quantitative_columns=[]
 date_columns=[]
 other_columns=[]
 if file_uploaded != None:
-    # @st.cache_data
+    @st.cache_data
     def load_data(file_uploaded):
         """
         loads data via 'teimseries.sql' tempalte and tben expands the comma-delimited
         lists of splits and split_values (one coloumn for each split)
         """
-        # df = pd.read_csv(file_uploaded)
-        # df = df.replace('nan',pd.NA)
-        # df = df.replace('NaN',pd.NA)
-        # return pd.read_csv(file_uploaded).replace('nan',pd.NA).replace('NaN',pd.NA).replace('',pd.NA)
-
-        # csvs can be surprisingly fiddly
         return pd.read_csv(file_uploaded, keep_default_na=False, na_values="")   
 
     data = load_data(file_uploaded)
@@ -231,11 +223,13 @@ if file_uploaded != None:
             # tab.dataframe(data)
         else:
             y_item=quantitative[i]
-            chart_type = tab.selectbox('Chart Type',['line', 'stacked bar'],key=y_item)
+            chart_type = tab.selectbox('Chart Type',['line', 'stacked bar', 'scatter'],key=y_item)
             if chart_type == 'stacked bar':
                 chart = alt.Chart(data).mark_bar()
             elif chart_type == 'line':
                 chart = alt.Chart(data).mark_line()
+            elif chart_type == 'scatter':
+                chart = alt.Chart(data).mark_circle()                
             c = chart.encode(
                 alt.X(x_item + ':T',axis=alt.Axis(tickSize=0, labelFontSize=0, grid=False)).title(''),
                 alt.Y(f'{y_item}:Q').title(''),
