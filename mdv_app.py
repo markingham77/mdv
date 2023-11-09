@@ -13,14 +13,16 @@ from pandas.api.types import (
 )
 from dateutil.parser import parse
 
-st.set_page_config(page_title="Multi-Dimensional Data Viewer (MDDV)",layout="wide")
-st.title('Multi-Dimensional Data Viewer (MDDV)')
+st.set_page_config(page_title="Multi-Dimensional Data (MD<sup>2</sup>V ) Viewer",layout="wide")
+# st.title('Multi-Dimensional Data Viewer (MD<sup>2</sup>V)')
 st.markdown('''
+    <h1>Multi-Dimensional Data Viewer ( V=MD<sup style='font-size:.8em;'>2</sup> ;-)</h1>
+                        
     Designed for tabular data where some columns represent dimensions and some columns represent metrics.
-    Simply upload a csv of your data and MDDV will do the rest.  A tab is produced for each metric, containing
+    Simply upload a csv of your data and MD<sup style='font-size:.8em;'>2</sup> will do the rest.  A tab is produced for each metric, containing
     sumbplots representing the metric across all dimensions.  The orientation is controlled by the options in
     the sidebar.
-            ''')
+            ''',unsafe_allow_html=True)
 
 def is_date(string, fuzzy=False):
     """
