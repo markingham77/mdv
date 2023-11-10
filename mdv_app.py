@@ -20,7 +20,7 @@ st.markdown('''
                         
     Designed for tabular data where some columns represent dimensions and some columns represent metrics.
     Simply upload a csv of your data and MD<sup style='font-size:.8em;'>2</sup> will do the rest.  A tab is produced for each metric, containing
-    sumbplots representing the metric across all dimensions.  The orientation is controlled by the options in
+    subplots representing the metric across different dimensions.  The orientation is controlled by the options in
     the sidebar.
             ''',unsafe_allow_html=True)
 
@@ -233,15 +233,25 @@ if file_uploaded != None:
         else:
             y_item=quantitative[i]
             chart_type = tab.selectbox('Chart Type',['line', 'stacked bar', 'scatter'],key=y_item)
+            ymin = data[y_item].dropna().min()
+            ymax = data[y_item].dropna().max()
+            if chart_type != 'stacked bar':
+                yaxis_slider = tab.slider('Y-Axis Limits',value=(ymin,ymax),key=f'{y_item}-yaxis-slider')
+                data.loc[data[y_item]<=yaxis_slider[0],y_item]=np.nan
+                data.loc[data[y_item]>=yaxis_slider[1],y_item]=np.nan
+                dom = [yaxis_slider[0], yaxis_slider[1]]
             if chart_type == 'stacked bar':
                 chart = alt.Chart(data).mark_bar()
+                dom = [ymin, ymax]    
             elif chart_type == 'line':
-                chart = alt.Chart(data).mark_line()
+                chart = alt.Chart(data).mark_line()                
             elif chart_type == 'scatter':
                 chart = alt.Chart(data).mark_circle()                
+
             c = chart.encode(
                 alt.X(x_item + ':T',axis=alt.Axis(tickSize=0, labelFontSize=0, grid=False)).title(''),
-                alt.Y(f'{y_item}:Q').title(''),
+                alt.Y(f'{y_item}:Q', scale=alt.Scale(domain=dom)).title(''),
+                # alt.Y(f'{y_item}:Q').title(''),
                 color=color,
                 tooltip = [x_item,y_item,color]
             ).properties(
