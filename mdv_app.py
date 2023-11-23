@@ -46,19 +46,25 @@ def is_date(string, fuzzy=False):
 
 examples_base = os.path.join(Path(__file__).parents[0],'examples')
 examples = [
-    {'label': 'World Bank Development Indicators', 'file': os.path.join(examples_base,'world_development_data_imputed.csv')},
+  # {'label': 'World Bank Development Indicators', 'file': os.path.join(examples_base,'world_development_data_imputed.csv')},    
+    {
+        'label': 'World Bank Development Indicators', 
+        'url': 'https://github.com/markingham77/mdv/blob/main/examples/world_development_data_imputed.csv',
+        'file': os.path.join(examples_base,'world_development_data_imputed.csv')
+    },        
 ]
 
 
-
+file_inputs_expander = st.expander("Data Inputs", expanded = True)
 file_uploaded = None
-file_type = st.radio("File type", ('Remote file', 'Local file', 'Example file'))
+file_type = file_inputs_expander.radio("File type", ('Remote file', 'Local file', 'Example file'))
 if file_type == 'Local file':
-    file_uploaded = st.file_uploader('Upload your csv')
+    file_uploaded = file_inputs_expander.file_uploader('Upload your csv')
 elif file_type ==  'Remote file':
-    url = st.text_input(label='Enter a url (must point to a csv)',placeholder=examples[0]["file"])
+    # url = file_inputs_expander.text_input(label='Enter a url (must point to a csv)',placeholder=examples[0]["file"])
+    url = file_inputs_expander.text_input(label='Enter a url (must point to a csv)')    
 elif file_type == 'Example file':
-    option = st.selectbox(
+    option = file_inputs_expander.selectbox(
         'Click on an example tabular data set',
         placeholder="Choose an option",
         index=None,
@@ -66,10 +72,10 @@ elif file_type == 'Example file':
     )
     for example in examples:
         if example['label'] == option:
-            source = example['file']    
-            st.write(option, f'source [here](file:///{source})')
+            source = example['url']    
+            file_inputs_expander.write(f'{option} source [here]({source})')
+            file_uploaded = example['file']
             break
-
 
 
 
@@ -78,36 +84,57 @@ quantitative_columns=[]
 date_columns=[]
 other_columns=[]
 if file_uploaded != None:
-    @st.cache_data
+    # @st.cache_data
     def load_data(file_uploaded):
         """
         loads data via 'teimseries.sql' tempalte and tben expands the comma-delimited
         lists of splits and split_values (one coloumn for each split)
         """
-        return pd.read_csv(file_uploaded, keep_default_na=False, na_values="")   
+        df = pd.read_csv(file_uploaded, keep_default_na=False, na_values="")   
+        df.columns = [c.upper() for c in df.columns]
+        return df
 
     data = load_data(file_uploaded)
+    column_type_df = pd.DataFrame(columns=['Field', 'Date', 'Categorical', 'Quantitative', 'Other'])
+    for c in column_type_df.columns:
+        column_type_df[c] = column_type_df[c].astype('bool')
+    column_type_df['Field'] = column_type_df['Field'].astype('str')    
+    i=0    
     for column in data.columns:
-        if is_categorical_dtype(data[column]) or data[column].nunique() < 10:
-            categorical_columns.append(column)
+        nunique = data[column].nunique()
+        cardinality = nunique/data.shape[0]
+        if column.upper() in ['DAY','MONTH','YEAR','DATE']:
+            date_columns.append(column)
+            column_type_df.loc[i] = [column, True, False, False, False]
         elif is_numeric_dtype(data[column]):
             quantitative_columns.append(column)
+            column_type_df.loc[i] = [column, False, False, True, False]
         elif is_datetime64_any_dtype(data[column]):
             date_columns.append(column)
+            column_type_df.loc[i] = [column, True, False, False, False]
         else:
             col_data = data[column][data[column]!='NaN']
             col_data = col_data[pd.notna(col_data)]
             if type(col_data.iloc[0])==str:
                 if is_date(col_data.iloc[0]):
                     date_columns.append(column)
+                    column_type_df.loc[i] = [column, True, False, False, False]
                 else:
-                    other_columns.append(column)
+                    if is_categorical_dtype(data[column]) or nunique < 10 or cardinality<0.3:
+                        categorical_columns.append(column)
+                        column_type_df.loc[i] = [column, False, True, False, False]
+                    else:
+                        other_columns.append(column)
+                        column_type_df.loc[i] = [column, False, False, False, True]
             else:
                 if type(col_data.iloc[0])==datetime.date:
                     date_columns.append(column)
+                    column_type_df.loc[i] = [column, True, False, False, False]
                 else:
                     other_columns.append(column)   
-
+                    column_type_df.loc[i] = [column, False, False, False, True]
+        i+=1
+    column_type_df = column_type_df.set_index('Field')    
     splits = categorical_columns
     
 
@@ -199,6 +226,9 @@ if file_uploaded != None:
     categorical = date_columns + [x.upper() for x in splits]
     quantitative = quantitative_columns
 
+    # with st.sidebar.expander('Field categories'):
+    #     st.data_editor(column_type_df)
+
     x_item = st.sidebar.selectbox(
         "X-Axis Item",
         date_columns + quantitative
@@ -239,6 +269,7 @@ if file_uploaded != None:
     remaining_categories=rot(remaining_categories)
 
     remaining_dims = [x for x in categorical if x not in [x_item, color, row,column]]
+    # st.write(data.columns)
     remaining_dim_values=[]
     for dim in remaining_dims:
         x = st.sidebar.selectbox(
