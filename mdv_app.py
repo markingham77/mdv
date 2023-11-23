@@ -12,6 +12,7 @@ from pandas.api.types import (
     is_object_dtype,
 )
 from dateutil.parser import parse
+from pathlib import Path
 
 st.set_page_config(page_title="Multi-Dimensional Data (MD<sup>2</sup>V ) Viewer",layout="wide")
 # st.title('Multi-Dimensional Data Viewer (MD<sup>2</sup>V)')
@@ -39,8 +40,39 @@ def is_date(string, fuzzy=False):
         return False
     
 
+# example_url = "https://www.kaggle.com/datasets/samybaladram/databank-world-development-indicators/download?datasetVersionNumber=4"
+# file_uploaded = st.sidebar.file_uploader('Upload your csv')
+# url = st.sidebar.text_input(label='Enter a url (must point to a csv)',value=example_url)
 
-file_uploaded = st.file_uploader('Upload your csv')
+examples_base = os.path.join(Path(__file__).parents[0],'examples')
+examples = [
+    {'label': 'World Bank Development Indicators', 'file': os.path.join(examples_base,'world_development_data_imputed.csv')},
+]
+
+
+
+file_uploaded = None
+file_type = st.radio("File type", ('Remote file', 'Local file', 'Example file'))
+if file_type == 'Local file':
+    file_uploaded = st.file_uploader('Upload your csv')
+elif file_type ==  'Remote file':
+    url = st.text_input(label='Enter a url (must point to a csv)',placeholder=examples[0]["file"])
+elif file_type == 'Example file':
+    option = st.selectbox(
+        'Click on an example tabular data set',
+        placeholder="Choose an option",
+        index=None,
+        options = [example['label'] for example in examples]        
+    )
+    for example in examples:
+        if example['label'] == option:
+            source = example['file']    
+            st.write(option, f'source [here](file:///{source})')
+            break
+
+
+
+
 categorical_columns=[]
 quantitative_columns=[]
 date_columns=[]
